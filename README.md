@@ -1,5 +1,11 @@
 # Overview
 
+## 🎥 Demo Video
+
+▶️ Watch the demo:  
+https://drive.google.com/file/d/1m5K4ewbHnP5lGbWDnnE_ylRPIwZWCI6j/view
+
+
 We have developed a cutting-edge Captions Generator Application from scratch using the latest technologies including Next.js 13, React, Tailwind.css, and WebAssembly. For storage, we use an aws s3 bucket and for transcription, we use an aws transcribe service. This innovative application transcribes videos and applies adjustable captions with a user-friendly editor. Noteworthy features include customizable options such as colour schemes, margins, and more, enhancing user experience and accessibility.
 
 # Technologies and Frameworks
