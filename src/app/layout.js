@@ -30,7 +30,10 @@ export const metadata = {
     creator: "@ParthMadhvani2",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
     apple: "/apple-icon.png",
   },
   robots: {
