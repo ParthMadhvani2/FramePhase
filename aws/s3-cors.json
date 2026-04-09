@@ -1,0 +1,12 @@
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedOrigins": [
+      "https://frame-phase.netlify.app",
+      "http://localhost:3000"
+    ],
+    "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+    "MaxAgeSeconds": 3000
+  }
+]

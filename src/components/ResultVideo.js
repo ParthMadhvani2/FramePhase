@@ -160,7 +160,29 @@ export default function ResultVideo({ filename, transcriptionItems }) {
     try {
       setIsProcessing(true);
       const srt = transcriptionItemsToSrt(transcriptionItems);
-      await ffmpeg.writeFile(filename, await fetchFile(videoUrl));
+
+      // Fetch the video ourselves so we can distinguish CORS / network errors
+      // from ffmpeg decode errors. fetchFile() swallows fetch errors into a
+      // generic "failed to load" message, which is unhelpful in prod.
+      let videoBytes;
+      try {
+        const res = await fetch(videoUrl, { mode: 'cors' });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        }
+        videoBytes = new Uint8Array(await res.arrayBuffer());
+      } catch (fetchErr) {
+        // Most common cause: S3 bucket has no CORS policy, so the browser
+        // blocks the cross-origin fetch with a TypeError "Failed to fetch".
+        const isCors = fetchErr instanceof TypeError;
+        throw new Error(
+          isCors
+            ? 'Browser blocked the video download (CORS). The S3 bucket needs a CORS policy allowing GET from this domain.'
+            : `Failed to download video: ${fetchErr.message}`
+        );
+      }
+
+      await ffmpeg.writeFile(filename, videoBytes);
       await ffmpeg.writeFile('subs.srt', srt);
       videoRef.current.src = videoUrl;
       await new Promise((resolve, reject) => {
@@ -192,7 +214,8 @@ export default function ResultVideo({ filename, transcriptionItems }) {
       toast.success('Captions applied!');
     } catch (error) {
       console.error('Transcoding failed:', error);
-      toast.error('Failed to apply captions. Please try again.');
+      // Surface the actual error message so the user (and we) can debug
+      toast.error(error?.message || 'Failed to apply captions. Please try again.', { duration: 6000 });
       setProgress(1);
     } finally {
       setIsProcessing(false);
@@ -346,7 +369,7 @@ export default function ResultVideo({ filename, transcriptionItems }) {
             </div>
           </div>
         )}
-        <video ref={videoRef} controls className="w-full" />
+        <video ref={videoRef} crossOrigin="anonymous" controls className="w-full" />
       </div>
 
       {/* Caption Preview Label */}
