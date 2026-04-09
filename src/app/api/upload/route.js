@@ -119,14 +119,20 @@ export async function POST(req) {
     return Response.json({ name: newName, ext, newName });
   } catch (error) {
     console.error('Upload error:', error);
-    // Surface AWS / Prisma error codes to the client so debugging is possible in prod
+    // Surface AWS error codes — check both .name and .Code, AWS SDK uses both
+    const code = error?.name || error?.Code;
+    const bucketName = error?.BucketName;
     const detail =
-      error?.name === 'AccessControlListNotSupported'
+      code === 'AccessControlListNotSupported'
         ? 'Storage bucket rejected the upload (bucket has Block Public Access enabled). Contact support.'
-        : error?.name === 'NoSuchBucket'
-        ? 'Storage bucket not found. Check BUCKET_NAME env var.'
-        : error?.name === 'InvalidAccessKeyId' || error?.name === 'SignatureDoesNotMatch'
-        ? 'Invalid AWS credentials. Check server env vars.'
+        : code === 'NoSuchBucket'
+        ? `Storage bucket "${bucketName || process.env.BUCKET_NAME || 'unknown'}" does not exist. Fix the BUCKET_NAME env var in Netlify.`
+        : code === 'PermanentRedirect'
+        ? 'Bucket is in a different region. Set AWS_REGION env var to match the bucket region.'
+        : code === 'InvalidAccessKeyId' || code === 'SignatureDoesNotMatch'
+        ? 'Invalid AWS credentials. Check AWS_ACCESS_KEY1 and AWS_SECRET_ACCESS_KEY1 env vars.'
+        : code === 'AccessDenied'
+        ? 'AWS credentials are valid but the IAM user is missing s3:PutObject permission on this bucket.'
         : error?.message || 'Unknown error';
     return Response.json(
       { error: `Upload failed: ${detail}` },
