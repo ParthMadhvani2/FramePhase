@@ -14,6 +14,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import UploadForm from '@/components/UploadForm';
 import { DashboardSkeleton } from '@/components/Skeleton';
+import UserAvatar from '@/components/UserAvatar';
 
 export default function DashboardPage() {
   return (
@@ -103,18 +104,21 @@ function DashboardContent() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
         >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-bold">
-                Welcome back, {session.user.name?.split(' ')[0] || 'Creator'}
-              </h1>
-              {isAdmin && (
-                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 uppercase tracking-wider">
-                  Admin
-                </span>
-              )}
+          <div className="flex items-center gap-4">
+            <UserAvatar user={session.user} size={52} />
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl sm:text-3xl font-bold">
+                  Welcome back, {session.user.name?.split(' ')[0] || 'Creator'}
+                </h1>
+                {isAdmin && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 uppercase tracking-wider">
+                    Admin
+                  </span>
+                )}
+              </div>
+              <p className="text-white/55">Upload a video to get started with AI captions.</p>
             </div>
-            <p className="text-white/55">Upload a video to get started with AI captions.</p>
           </div>
 
           {/* Plan + usage in header area */}

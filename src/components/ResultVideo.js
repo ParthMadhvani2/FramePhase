@@ -72,6 +72,7 @@ export default function ResultVideo({ filename, transcriptionItems }) {
   const [progress, setProgress] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [ffmpegError, setFfmpegError] = useState(null);
   const ffmpegRef = useRef(null);
   const videoRef = useRef(null);
 
@@ -103,20 +104,48 @@ export default function ResultVideo({ filename, transcriptionItems }) {
   }, [availablePresets, activePreset]);
 
   const load = async () => {
+    // Check SharedArrayBuffer up-front — ffmpeg.wasm needs cross-origin isolation
+    if (typeof SharedArrayBuffer === 'undefined') {
+      const msg = 'Your browser blocks SharedArrayBuffer (needed for video processing). Try Chrome/Edge, or disable strict privacy extensions.';
+      console.error(msg);
+      setFfmpegError(msg);
+      setIsReady(false);
+      toast.error(msg, { duration: 8000 });
+      return;
+    }
     try {
       const ffmpeg = ffmpegRef.current;
       if (!ffmpeg) return;
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.2/dist/umd';
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
+      // Try jsdelivr first (sets CORP:cross-origin by default); fall back to unpkg.
+      const sources = [
+        'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.2/dist/umd',
+        'https://unpkg.com/@ffmpeg/core@0.12.2/dist/umd',
+      ];
+      let lastErr;
+      let loaded = false;
+      for (const baseURL of sources) {
+        try {
+          const [coreURL, wasmURL] = await Promise.all([
+            toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          ]);
+          await ffmpeg.load({ coreURL, wasmURL });
+          loaded = true;
+          break;
+        } catch (e) {
+          console.warn(`FFmpeg load from ${baseURL} failed:`, e);
+          lastErr = e;
+        }
+      }
+      if (!loaded) throw lastErr || new Error('All ffmpeg-core CDN sources failed');
       await ffmpeg.writeFile('/tmp/poppins.ttf', await fetchFile(poppins));
       await ffmpeg.writeFile('/tmp/poppins-bold.ttf', await fetchFile(poppinsBold));
     } catch (error) {
       console.error('Failed to load FFmpeg:', error);
+      const msg = error?.message || 'Failed to load video processor.';
+      setFfmpegError(msg);
       setIsReady(false);
-      toast.error('Failed to load video processor. Try refreshing the page.');
+      toast.error(`Video processor failed to load: ${msg}`, { duration: 8000 });
       return;
     }
     setIsReady(true);
@@ -351,6 +380,8 @@ export default function ResultVideo({ filename, transcriptionItems }) {
         <button data-action="apply-captions" onClick={transcode} disabled={isProcessing || !isReady} className={`btn-primary flex-1 justify-center ${!isReady && !isProcessing ? 'opacity-50' : ''}`}>
           {isProcessing ? (
             <FramePhaseLoader variant="inline" message="Processing..." />
+          ) : ffmpegError ? (
+            <span className="text-red-300">Processor unavailable — refresh</span>
           ) : !isReady ? (
             <FramePhaseLoader variant="inline" message="Loading FFmpeg..." />
           ) : (

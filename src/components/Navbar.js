@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Menu, X, ChevronDown, LogOut, LayoutDashboard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from "./Logo";
+import UserAvatar from "./UserAvatar";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -62,13 +63,7 @@ export default function Navbar() {
             ) : session ? (
               <div className="relative" ref={profileRef}>
                 <button onClick={() => setProfileOpen(!profileOpen)} aria-expanded={profileOpen} aria-haspopup="menu" className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-white/5 transition-colors">
-                  {session.user.image ? (
-                    <img src={session.user.image} alt="" className="w-8 h-8 rounded-full ring-2 ring-brand-500/30" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-sm font-bold">
-                      {session.user.name?.[0] || 'U'}
-                    </div>
-                  )}
+                  <UserAvatar user={session.user} size={32} />
                   <ChevronDown className="w-4 h-4 text-white/50" />
                 </button>
                 <AnimatePresence>
