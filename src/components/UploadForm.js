@@ -74,13 +74,17 @@ export default function UploadForm() {
         i === queueIndex ? { ...item, status: 'done', progress: 100, newName: res.data.newName } : item
       ));
 
-      return res.data.newName;
+      return { newName: res.data.newName, error: null };
     } catch (err) {
-      const message = err.response?.data?.error || 'Upload failed.';
+      const message =
+        err.response?.data?.error ||
+        (err.response?.status ? `Upload failed (HTTP ${err.response.status}).` : null) ||
+        err.message ||
+        'Upload failed.';
       setUploadQueue(prev => prev.map((item, i) =>
         i === queueIndex ? { ...item, status: 'error', error: message } : item
       ));
-      return null;
+      return { newName: null, error: message };
     }
   };
 
@@ -108,11 +112,20 @@ export default function UploadForm() {
       const queueEntry = { file: fileArray[0], progress: 0, status: 'pending', error: null, newName: null };
       setUploadQueue([queueEntry]);
 
-      const newName = await uploadSingleFile(fileArray[0], 0);
+      const { newName, error: uploadError } = await uploadSingleFile(fileArray[0], 0);
       if (newName) {
         toast.success('Video uploaded! Starting transcription...');
         const langParam = selectedLanguage !== 'auto' ? `?language=${selectedLanguage}` : '';
+        // Notify parent (dashboard) that upload succeeded so it can refetch history
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('video-uploaded', { detail: { newName } }));
+        }
         router.push('/' + newName + langParam);
+      } else {
+        // Upload failed — surface the actual error to the user so they know what went wrong
+        const errMsg = uploadError || 'Upload failed. Please check your connection and try again.';
+        setError(errMsg);
+        toast.error(errMsg);
       }
       setUploadQueue([]);
       return;

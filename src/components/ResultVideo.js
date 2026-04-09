@@ -26,9 +26,25 @@ const FONT_SIZE_OPTIONS = [
 ];
 
 export default function ResultVideo({ filename, transcriptionItems }) {
-  const videoUrl = "https://frame-phase.s3.amazonaws.com/" + filename;
+  // The S3 bucket is private (Block Public Access). Fetch a short-lived
+  // presigned GET URL from our API so we can stream the video + let ffmpeg.wasm
+  // read it.
+  const [videoUrl, setVideoUrl] = useState(null);
   const { data: session } = useSession();
   const plan = session?.user?.plan || 'free';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!filename) return;
+    fetch(`/api/video-url?filename=${encodeURIComponent(filename)}`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((data) => { if (!cancelled) setVideoUrl(data.url); })
+      .catch((err) => {
+        console.error('Failed to get video URL:', err);
+        toast.error('Failed to load video. Please refresh the page.');
+      });
+    return () => { cancelled = true; };
+  }, [filename]);
 
   // Style state
   const [activePreset, setActivePreset] = useState(null);
@@ -64,11 +80,15 @@ export default function ResultVideo({ filename, transcriptionItems }) {
 
   useEffect(() => {
     ffmpegRef.current = new FFmpeg();
-    if (videoRef.current) {
-      videoRef.current.src = videoUrl;
-    }
     load();
     return () => { ffmpegRef.current = null; };
+  }, []);
+
+  // Point the <video> element at the presigned URL once it resolves
+  useEffect(() => {
+    if (videoUrl && videoRef.current) {
+      videoRef.current.src = videoUrl;
+    }
   }, [videoUrl]);
 
   // Set default preset on load
@@ -132,6 +152,10 @@ export default function ResultVideo({ filename, transcriptionItems }) {
   const transcode = async () => {
     const ffmpeg = ffmpegRef.current;
     if (!ffmpeg || !videoRef.current) return;
+    if (!videoUrl) {
+      toast.error('Video is still loading. Please wait a moment.');
+      return;
+    }
 
     try {
       setIsProcessing(true);
