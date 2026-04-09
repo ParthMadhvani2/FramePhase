@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signIn } from 'next-auth/react';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -46,15 +46,27 @@ function DashboardContent() {
   }, [searchParams, router]);
 
   // Fetch user's video history
-  useEffect(() => {
-    if (session?.user?.id) {
-      axios
-        .get('/api/videos')
-        .then((res) => setVideos(res.data.videos || []))
-        .catch(() => setVideos([]))
-        .finally(() => setLoadingVideos(false));
-    }
+  const refetchVideos = useCallback(() => {
+    if (!session?.user?.id) return;
+    setLoadingVideos(true);
+    axios
+      .get('/api/videos')
+      .then((res) => setVideos(res.data.videos || []))
+      .catch(() => setVideos([]))
+      .finally(() => setLoadingVideos(false));
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    refetchVideos();
+  }, [refetchVideos]);
+
+  // Refetch when UploadForm fires the `video-uploaded` event (so the history
+  // list updates immediately even if the user navigates back to the dashboard)
+  useEffect(() => {
+    const handler = () => refetchVideos();
+    window.addEventListener('video-uploaded', handler);
+    return () => window.removeEventListener('video-uploaded', handler);
+  }, [refetchVideos]);
 
   const handleCancelSubscription = async () => {
     if (!confirm('Are you sure you want to cancel? You\'ll keep access until the end of your billing period.')) return;

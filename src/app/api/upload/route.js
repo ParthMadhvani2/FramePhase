@@ -31,8 +31,9 @@ export async function POST(req) {
       return Response.json({ error: "User not found." }, { status: 404 });
     }
 
-    // Admin users bypass limits
-    const isAdmin = user.plan === 'admin';
+    // Admin users bypass limits — respect either the `plan === 'admin'` set by auth.js
+    // via ADMIN_EMAILS env var OR the explicit `isAdmin` flag on the User row
+    const isAdmin = user.plan === 'admin' || user.isAdmin === true;
     if (!isAdmin && user.videosUsed >= user.videosLimit) {
       return Response.json(
         { error: "You've reached your monthly video limit. Please upgrade your plan." },
@@ -76,10 +77,12 @@ export async function POST(req) {
     const ext = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'mp4';
     const newName = id + '.' + ext;
 
+    // NOTE: no ACL — the bucket has "Block all public access" enabled, and passing
+    // ACL: 'public-read' would make S3 reject the PUT with AccessControlListNotSupported.
+    // Videos are served to the client via presigned GET URLs (see /api/video-url).
     const uploadCommand = new PutObjectCommand({
       Bucket: process.env.BUCKET_NAME,
-      Body: data,
-      ACL: 'public-read',
+      Body: Buffer.from(data),
       ContentType: type,
       Key: newName,
     });
@@ -105,6 +108,18 @@ export async function POST(req) {
     return Response.json({ name: newName, ext, newName });
   } catch (error) {
     console.error('Upload error:', error);
-    return Response.json({ error: "Upload failed. Please try again." }, { status: 500 });
+    // Surface AWS / Prisma error codes to the client so debugging is possible in prod
+    const detail =
+      error?.name === 'AccessControlListNotSupported'
+        ? 'Storage bucket rejected the upload (bucket has Block Public Access enabled). Contact support.'
+        : error?.name === 'NoSuchBucket'
+        ? 'Storage bucket not found. Check BUCKET_NAME env var.'
+        : error?.name === 'InvalidAccessKeyId' || error?.name === 'SignatureDoesNotMatch'
+        ? 'Invalid AWS credentials. Check server env vars.'
+        : error?.message || 'Unknown error';
+    return Response.json(
+      { error: `Upload failed: ${detail}` },
+      { status: 500 }
+    );
   }
 }
