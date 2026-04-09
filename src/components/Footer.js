@@ -1,42 +1,60 @@
-import React from 'react'
+'use client';
+
 import Link from "next/link";
-import Image from 'next/image';
-import SparklesIcon from './SparklesIcon';
+import { Github } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
+import { ArrowRight } from "lucide-react";
+import Logo from "./Logo";
 
-const Footer = () => {
-    return (
-        <div className='w-full pt-16 pb-8 z-0' data-scroll
-            data-scroll-section
-            data-scroll-speed="-0.1">
+export default function Footer() {
+  const { data: session } = useSession();
+  const currentYear = new Date().getFullYear();
 
-            <div className='footer-content flex justify-around items-start mb-12 '>
-                <div className="content1 flex flex-col">
-                <Link href="/" className="flex gap-1 hover:text-slate-500">
-                    <SparklesIcon />
-                    <span>FramePhase</span>
-                </Link>
-            </div>
-            <div className='flex gap-20'>
-                <div className="content2 flex flex-col gap-4">
-                    <h3 className='text-xl text-semibold'>Company</h3>
-                    <Link href="/pricing"><h3 className='text-slate-300 hover:text-slate-400'>Pricing</h3></Link>
-                    <Link href="https://github.com/Hackerzspace/FramePhase"><h3 className='text-slate-300 hover:text-slate-400'>About</h3></Link>
-                </div>
-                <div className="content3 flex flex-col gap-4">
-                    <h3 className='text-xl text-semibold'>Support</h3>
-                    <Link href="mailto:contact@framephase.com"><h3 className='text-slate-300 hover:text-slate-400'>Contact Us</h3></Link>
-                </div>
-            </div>
-
-            </div>
-
-            <div className='video-done flex flex-col gap-4 justify-center items-center'>
-                <Image src='/footer-logo.svg' alt='logo' height={150} width={150} /> 
-                <h1 className='text-3xl sm:text-5xl font-semibold'>Videos, <span className='text-orange-400'>Done Right</span></h1>
-                <div className="copyright">Copyright ©️ <span id="fullyear">2024</span> <Link href="/"><span className='text-orange-400'>FramePhase</span></Link>. All Rights Reserved.</div>
-            </div>
+  return (
+    <footer className="border-t border-white/[0.04]">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* CTA */}
+        <div className="py-20 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">
+            Ready to try it?
+          </h2>
+          <p className="text-white/50 mb-8 max-w-md mx-auto">
+            Upload your first video for free. No credit card, no commitment.
+          </p>
+          {session ? (
+            <Link href="/dashboard" className="btn-primary text-base px-7 py-3.5 inline-flex">
+              Go to Dashboard <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
+            <button onClick={() => signIn("google")} className="btn-primary text-base px-7 py-3.5">
+              Get started free <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
-    )
-}
 
-export default Footer;
+        {/* Links */}
+        <div className="flex flex-col sm:flex-row items-center justify-between py-8 border-t border-white/[0.04] gap-4">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2">
+              <Logo size="small" />
+              <span className="text-sm font-semibold">FramePhase</span>
+            </Link>
+            <span className="text-xs text-white/35">&copy; {currentYear}</span>
+          </div>
+
+          <div className="flex items-center gap-6 flex-wrap justify-center">
+            <Link href="/pricing" className="text-xs text-white/45 hover:text-white/70 transition-colors">Pricing</Link>
+            <Link href="/compare" className="text-xs text-white/45 hover:text-white/70 transition-colors">Compare</Link>
+            <Link href="/#features" className="text-xs text-white/45 hover:text-white/70 transition-colors">Features</Link>
+            <Link href="/#faq" className="text-xs text-white/45 hover:text-white/70 transition-colors">FAQ</Link>
+            <Link href="/terms" className="text-xs text-white/45 hover:text-white/70 transition-colors">Terms</Link>
+            <Link href="/privacy" className="text-xs text-white/45 hover:text-white/70 transition-colors">Privacy</Link>
+            <a href="https://github.com/ParthMadhvani2/FramePhase" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/60 transition-colors">
+              <Github className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}

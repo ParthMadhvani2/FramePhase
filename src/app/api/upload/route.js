@@ -1,24 +1,81 @@
-import {PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/libs/auth";
+import prisma from "@/libs/prisma";
+import { uploadLimiter } from "@/libs/rate-limit";
 import uniqid from 'uniqid';
 
 export async function POST(req) {
+  try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return Response.json({ error: "Please sign in to upload videos." }, { status: 401 });
+    }
+
+    // Rate limit by user email
+    const { success: rateLimitOk, resetIn } = uploadLimiter(session.user.email);
+    if (!rateLimitOk) {
+      return Response.json(
+        { error: "Too many uploads. Please wait a moment." },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
+      );
+    }
+
+    // Check usage limits
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return Response.json({ error: "User not found." }, { status: 404 });
+    }
+
+    // Admin users bypass limits
+    const isAdmin = user.plan === 'admin';
+    if (!isAdmin && user.videosUsed >= user.videosLimit) {
+      return Response.json(
+        { error: "You've reached your monthly video limit. Please upgrade your plan." },
+        { status: 403 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file');
-    const {name, type} = file;
+
+    if (!file) {
+      return Response.json({ error: "No file provided." }, { status: 400 });
+    }
+
+    // Validate file type
+    const allowedTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'];
+    if (!allowedTypes.includes(file.type)) {
+      return Response.json({ error: "Invalid file type. Please upload a video file." }, { status: 400 });
+    }
+
+    // Validate file size (500MB max)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return Response.json({ error: "File too large. Maximum size is 500MB." }, { status: 400 });
+    }
+
+    const { name, type } = file;
     const data = await file.arrayBuffer();
-  
+
     const s3client = new S3Client({
-      region: 'us-east-1', //region in aws portal in s3 depends the upload and download speeds
+      region: 'us-east-1',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY1,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
       },
     });
-  
+
     const id = uniqid();
-    const ext = name.split('.').slice(-1)[0];
+    const rawExt = name.split('.').slice(-1)[0]?.toLowerCase();
+    const ALLOWED_EXTENSIONS = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
+    const ext = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'mp4';
     const newName = id + '.' + ext;
-  
+
     const uploadCommand = new PutObjectCommand({
       Bucket: process.env.BUCKET_NAME,
       Body: data,
@@ -26,8 +83,28 @@ export async function POST(req) {
       ContentType: type,
       Key: newName,
     });
-  
+
     await s3client.send(uploadCommand);
-  
-    return Response.json({name,ext,newName,id});
+
+    // Increment usage counter and track video
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { videosUsed: { increment: 1 } },
+    });
+
+    await prisma.video.create({
+      data: {
+        userId: user.id,
+        filename: newName,
+        originalName: name,
+        status: 'uploaded',
+      },
+    });
+
+    // Only return what the client needs — filename for the editor route
+    return Response.json({ name: newName, ext, newName });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return Response.json({ error: "Upload failed. Please try again." }, { status: 500 });
   }
+}
