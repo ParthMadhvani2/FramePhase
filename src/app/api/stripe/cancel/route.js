@@ -4,7 +4,7 @@ import { stripe } from "@/libs/stripe";
 import prisma from "@/libs/prisma";
 import { checkoutLimiter } from "@/libs/rate-limit";
 
-export async function POST(req) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {

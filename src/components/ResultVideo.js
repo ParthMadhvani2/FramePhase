@@ -1,7 +1,7 @@
 'use client';
 
 import { transcriptionItemsToSrt } from "@/libs/awsTranscriptionHelpers";
-import { getAvailablePresets, canAccess } from "@/libs/plans";
+import { getAvailablePresets } from "@/libs/plans";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -10,7 +10,6 @@ import { Sparkles, Download, Lock, ChevronDown, ArrowUpRight } from "lucide-reac
 import FramePhaseLoader from "@/components/FramePhaseLoader";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { UpgradeBadge } from "./LockedFeature";
 import poppins from './../fonts/Poppins-Regular.ttf';
 import poppinsBold from './../fonts/Poppins-Bold.ttf';
 
