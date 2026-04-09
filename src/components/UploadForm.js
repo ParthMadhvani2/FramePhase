@@ -173,7 +173,6 @@ export default function UploadForm() {
   };
 
   const isUploading = uploadQueue.some(q => q.status === 'uploading' || q.status === 'pending');
-  const activeUpload = uploadQueue.find(q => q.status === 'uploading');
   const selectedLang = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage);
 
   return (

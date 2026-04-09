@@ -5,8 +5,8 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  Upload, Video, Sparkles, Crown, ArrowRight,
-  BarChart3, Settings, Clock, ExternalLink, Film,
+  Upload, Video, Sparkles, Crown,
+  Clock, ExternalLink, Film,
   Plus, TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';

@@ -3,7 +3,7 @@ import { authOptions } from "@/libs/auth";
 import prisma from "@/libs/prisma";
 import { generalLimiter } from "@/libs/rate-limit";
 
-export async function GET(req) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });

@@ -82,8 +82,8 @@ export default function OpenSourceSection() {
               <p><span className="text-brand-300">payments</span>  <span className="text-white/20">→</span> Stripe Subscriptions</p>
               <p><span className="text-brand-300">styling</span>  <span className="text-white/20">→</span> Tailwind CSS</p>
               <p><span className="text-brand-300">deploy</span>  <span className="text-white/20">→</span> Netlify / Vercel</p>
-              <p className="mt-3 text-white/15">// everything is inspectable at</p>
-              <p className="text-white/15">// github.com/ParthMadhvani2/FramePhase</p>
+              <p className="mt-3 text-white/15">{"// everything is inspectable at"}</p>
+              <p className="text-white/15">{"// github.com/ParthMadhvani2/FramePhase"}</p>
             </div>
           </motion.div>
         </div>

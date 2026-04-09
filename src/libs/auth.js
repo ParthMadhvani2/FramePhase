@@ -21,7 +21,7 @@ export const authOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       // On first sign-in, set admin privileges if applicable
       if (user) {
         const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase());
