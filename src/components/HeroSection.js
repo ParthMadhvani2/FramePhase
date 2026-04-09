@@ -31,19 +31,26 @@ export default function HeroSection() {
     const after = afterRef.current;
     if (!before || !after) return;
 
+    // Force the browser to start loading both videos (overrides preload="metadata")
+    before.load();
+    after.load();
+
     let bothReady = 0;
     const tryPlay = () => {
       bothReady++;
       if (bothReady >= 2) {
         before.currentTime = 0;
         after.currentTime = 0;
-        before.play().catch(() => {});
-        after.play().catch(() => {});
+        Promise.all([
+          before.play().catch(() => {}),
+          after.play().catch(() => {}),
+        ]);
       }
     };
 
-    before.addEventListener('canplaythrough', tryPlay, { once: true });
-    after.addEventListener('canplaythrough', tryPlay, { once: true });
+    // canplay fires as soon as playback can begin (earlier than canplaythrough)
+    before.addEventListener('canplay', tryPlay, { once: true });
+    after.addEventListener('canplay', tryPlay, { once: true });
 
     const interval = setInterval(syncVideos, 2000);
 
@@ -56,6 +63,8 @@ export default function HeroSection() {
 
     return () => {
       clearInterval(interval);
+      before.removeEventListener('canplay', tryPlay);
+      after.removeEventListener('canplay', tryPlay);
       before.removeEventListener('seeked', handleLoop);
       after.removeEventListener('seeked', handleLoop);
     };
@@ -154,8 +163,9 @@ export default function HeroSection() {
                     ref={beforeRef}
                     src="https://dawid-epic-captions.s3.us-east-1.amazonaws.com/without-captions.mp4"
                     crossOrigin="anonymous"
+                    autoPlay
                     muted loop playsInline
-                    preload="metadata"
+                    preload="auto"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -167,8 +177,9 @@ export default function HeroSection() {
                     ref={afterRef}
                     src="https://dawid-epic-captions.s3.us-east-1.amazonaws.com/with-captions.mp4"
                     crossOrigin="anonymous"
+                    autoPlay
                     muted loop playsInline
-                    preload="metadata"
+                    preload="auto"
                     className="w-full h-full object-cover"
                   />
                 </div>
