@@ -4,24 +4,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/libs/auth";
 import { transcribeLimiter } from "@/libs/rate-limit";
 import prisma from "@/libs/prisma";
+import { getS3ClientConfig, getBucketName } from "@/libs/aws-config";
 
 function getClient() {
-  return new TranscribeClient({
-    region: 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY1,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
-    },
-  });
+  return new TranscribeClient(getS3ClientConfig());
 }
 
 function createTranscriptionCommand(filename, languageCode) {
+  const bucket = getBucketName();
   const params = {
     TranscriptionJobName: filename,
-    OutputBucketName: process.env.BUCKET_NAME,
+    OutputBucketName: bucket,
     OutputKey: filename + '.transcription',
     Media: {
-      MediaFileUri: 's3://' + process.env.BUCKET_NAME + '/' + filename,
+      MediaFileUri: 's3://' + bucket + '/' + filename,
     },
   };
 
@@ -66,15 +62,9 @@ async function streamToString(stream) {
 
 async function getTranscriptionFile(filename) {
   const transcriptionFile = filename + '.transcription';
-  const s3client = new S3Client({
-    region: 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY1,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
-    },
-  });
+  const s3client = new S3Client(getS3ClientConfig());
   const getObjectCommand = new GetObjectCommand({
-    Bucket: process.env.BUCKET_NAME,
+    Bucket: getBucketName(),
     Key: transcriptionFile,
   });
   let transcriptionFileResponse = null;

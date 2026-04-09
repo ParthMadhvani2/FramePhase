@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/libs/auth";
 import prisma from "@/libs/prisma";
 import { uploadLimiter } from "@/libs/rate-limit";
+import { getS3ClientConfig, getBucketName, getAwsCredentials } from "@/libs/aws-config";
 import uniqid from 'uniqid';
 
 export async function POST(req) {
@@ -63,13 +64,23 @@ export async function POST(req) {
     const { name, type } = file;
     const data = await file.arrayBuffer();
 
-    const s3client = new S3Client({
-      region: 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY1,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
-      },
-    });
+    // Fail fast with a clear message if server env vars aren't set
+    const creds = getAwsCredentials();
+    const bucket = getBucketName();
+    if (!creds.accessKeyId || !creds.secretAccessKey) {
+      return Response.json(
+        { error: "Server misconfigured: AWS credentials are not set. Check Netlify env vars (AWS_ACCESS_KEY1 + AWS_SECRET_ACCESS_KEY1)." },
+        { status: 500 }
+      );
+    }
+    if (!bucket) {
+      return Response.json(
+        { error: "Server misconfigured: BUCKET_NAME env var is not set." },
+        { status: 500 }
+      );
+    }
+
+    const s3client = new S3Client(getS3ClientConfig());
 
     const id = uniqid();
     const rawExt = name.split('.').slice(-1)[0]?.toLowerCase();
@@ -81,7 +92,7 @@ export async function POST(req) {
     // ACL: 'public-read' would make S3 reject the PUT with AccessControlListNotSupported.
     // Videos are served to the client via presigned GET URLs (see /api/video-url).
     const uploadCommand = new PutObjectCommand({
-      Bucket: process.env.BUCKET_NAME,
+      Bucket: bucket,
       Body: Buffer.from(data),
       ContentType: type,
       Key: newName,

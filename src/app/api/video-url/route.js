@@ -3,6 +3,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/libs/auth";
 import prisma from "@/libs/prisma";
+import { getS3ClientConfig, getBucketName } from "@/libs/aws-config";
 
 /**
  * Returns a short-lived presigned GET URL for a video stored in our private
@@ -40,16 +41,10 @@ export async function GET(req) {
   }
 
   try {
-    const s3 = new S3Client({
-      region: "us-east-1",
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY1,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
-      },
-    });
+    const s3 = new S3Client(getS3ClientConfig());
 
     const command = new GetObjectCommand({
-      Bucket: process.env.BUCKET_NAME,
+      Bucket: getBucketName(),
       Key: filename,
     });
 
