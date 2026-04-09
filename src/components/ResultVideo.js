@@ -161,25 +161,33 @@ export default function ResultVideo({ filename, transcriptionItems }) {
       setIsProcessing(true);
       const srt = transcriptionItemsToSrt(transcriptionItems);
 
-      // Fetch the video ourselves so we can distinguish CORS / network errors
-      // from ffmpeg decode errors. fetchFile() swallows fetch errors into a
-      // generic "failed to load" message, which is unhelpful in prod.
+      // Fetch the video bytes for ffmpeg. Try the direct presigned S3 URL
+      // first (fast, no server cost), and if the S3 bucket has no CORS
+      // policy the browser will throw a TypeError — fall back to our
+      // same-origin proxy route which streams the bytes through the server.
       let videoBytes;
-      try {
-        const res = await fetch(videoUrl, { mode: 'cors' });
+      const tryFetch = async (url, label) => {
+        const res = await fetch(url);
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
+          throw new Error(`${label} returned HTTP ${res.status} ${res.statusText}`);
         }
-        videoBytes = new Uint8Array(await res.arrayBuffer());
-      } catch (fetchErr) {
-        // Most common cause: S3 bucket has no CORS policy, so the browser
-        // blocks the cross-origin fetch with a TypeError "Failed to fetch".
-        const isCors = fetchErr instanceof TypeError;
-        throw new Error(
-          isCors
-            ? 'Browser blocked the video download (CORS). The S3 bucket needs a CORS policy allowing GET from this domain.'
-            : `Failed to download video: ${fetchErr.message}`
-        );
+        return new Uint8Array(await res.arrayBuffer());
+      };
+
+      try {
+        videoBytes = await tryFetch(videoUrl, 'S3');
+      } catch (directErr) {
+        console.warn('Direct S3 fetch failed, falling back to proxy:', directErr);
+        try {
+          videoBytes = await tryFetch(
+            `/api/video-proxy?filename=${encodeURIComponent(filename)}`,
+            'Proxy'
+          );
+        } catch (proxyErr) {
+          throw new Error(
+            `Failed to download video. S3 direct: ${directErr.message}. Proxy: ${proxyErr.message}`
+          );
+        }
       }
 
       await ffmpeg.writeFile(filename, videoBytes);
@@ -369,7 +377,7 @@ export default function ResultVideo({ filename, transcriptionItems }) {
             </div>
           </div>
         )}
-        <video ref={videoRef} crossOrigin="anonymous" controls className="w-full" />
+        <video ref={videoRef} controls className="w-full" />
       </div>
 
       {/* Caption Preview Label */}
