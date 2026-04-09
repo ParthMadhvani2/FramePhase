@@ -1,11 +1,15 @@
+import dynamic from "next/dynamic";
 import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/FeaturesSection";
-import HowItWorksSection from "@/components/HowItWorksSection";
-import ComparisonSection from "@/components/ComparisonSection";
-import TrustSection from "@/components/TrustSection";
-import CTASection from "@/components/CTASection";
-import FAQSection from "@/components/FAQSection";
-import Footer from "@/components/Footer";
+
+// Below-the-fold sections are lazy-loaded to speed up initial paint.
+// Hero stays in the main bundle since it's always above the fold.
+const FeaturesSection = dynamic(() => import("@/components/FeaturesSection"));
+const HowItWorksSection = dynamic(() => import("@/components/HowItWorksSection"));
+const ComparisonSection = dynamic(() => import("@/components/ComparisonSection"));
+const TrustSection = dynamic(() => import("@/components/TrustSection"));
+const CTASection = dynamic(() => import("@/components/CTASection"));
+const FAQSection = dynamic(() => import("@/components/FAQSection"));
+const Footer = dynamic(() => import("@/components/Footer"));
 
 // Structured data for SEO — helps Google show rich results
 const jsonLd = {

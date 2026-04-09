@@ -155,7 +155,7 @@ export default function HeroSection() {
                     src="https://dawid-epic-captions.s3.us-east-1.amazonaws.com/without-captions.mp4"
                     crossOrigin="anonymous"
                     muted loop playsInline
-                    preload="auto"
+                    preload="metadata"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -168,7 +168,7 @@ export default function HeroSection() {
                     src="https://dawid-epic-captions.s3.us-east-1.amazonaws.com/with-captions.mp4"
                     crossOrigin="anonymous"
                     muted loop playsInline
-                    preload="auto"
+                    preload="metadata"
                     className="w-full h-full object-cover"
                   />
                 </div>
