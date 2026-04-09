@@ -1,70 +1,138 @@
-# Overview
+# FramePhase
 
-## 🎥 Demo Video
+AI-powered video caption generator that runs in your browser. Upload a video, get an AI transcription, edit the text, pick a style, and download with captions burned in — no server-side video processing.
 
-▶️ Watch the demo:  
-https://drive.google.com/file/d/1m5K4ewbHnP5lGbWDnnE_ylRPIwZWCI6j/view
+**Live:** [framephase.app](https://frame-phase.netlify.app)
 
+## How it works
 
-We have developed a cutting-edge Captions Generator Application from scratch using the latest technologies including Next.js 13, React, Tailwind.css, and WebAssembly. For storage, we use an aws s3 bucket and for transcription, we use an aws transcribe service. This innovative application transcribes videos and applies adjustable captions with a user-friendly editor. Noteworthy features include customizable options such as colour schemes, margins, and more, enhancing user experience and accessibility.
+1. **Upload** — Drag and drop a video (MP4, MOV, AVI, WebM, MKV up to 500MB)
+2. **Transcribe** — AWS Transcribe auto-detects language and returns timestamped text
+3. **Edit** — Fix any word in the inline editor, summarize with AI
+4. **Style** — Choose from caption presets (Classic, Yellow, Bold Red, Neon, Soft)
+5. **Download** — Captions are burned into the video client-side via FFmpeg WASM. Export SRT/VTT subtitle files on paid plans.
 
-# Technologies and Frameworks
+The actual caption-rendering runs entirely in the browser using WebAssembly. The processed video never leaves your device.
 
-- Next.js
-- React
-- Axios
-- Tailwind CSS
-- WebAssembly
-- AWS SDK
-- AWS S3
-- AWS Transcribe
+## Tech stack
 
-# Installation
+- **Framework:** Next.js 14 (App Router)
+- **Auth:** NextAuth.js v4 + Google OAuth + Prisma Adapter
+- **Database:** Prisma ORM (SQLite dev, Postgres production-ready)
+- **Payments:** Stripe Subscriptions (checkout, webhooks, usage gating)
+- **Transcription:** AWS Transcribe
+- **Storage:** AWS S3
+- **Video processing:** FFmpeg WASM (client-side)
+- **UI:** Tailwind CSS, Framer Motion, Lucide icons
+- **Deployment:** Vercel / Netlify
 
-Follow the steps below to install and setup the project:
+## Getting started
 
-1. **Clone the repository**
+### Prerequisites
 
-   Open your terminal and run the following command:
+- Node.js 18+
+- npm or yarn
+- AWS account (S3 + Transcribe)
+- Google Cloud Console project (OAuth credentials)
+- Stripe account
 
-   ```bash
-   git clone hhttps://github.com/ParthMadhvani2/FramePhase.git
-   ```
+### Setup
 
-2. **Navigate to the project directory**
+```bash
+git clone https://github.com/ParthMadhvani2/FramePhase.git
+cd FramePhase
+npm install
+```
 
-   ```bash
-   cd framephase
-   ```
+Copy the example env file and fill in your keys:
 
-3. **Install Node.js**
+```bash
+cp .env.example .env
+```
 
-   The project requires Node.js version 13.4.19 or later. You can download it from [here](https://nodejs.org/en/download/).
+Required environment variables:
 
-4. **Install the required dependencies**
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Prisma connection string (`file:./dev.db` for local SQLite) |
+| `NEXTAUTH_URL` | App URL (`http://localhost:3000` for dev) |
+| `NEXTAUTH_SECRET` | Generate with `openssl rand -base64 32` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `AWS_ACCESS_KEY1` | AWS IAM access key |
+| `AWS_SECRET_ACCESS_KEY1` | AWS IAM secret key |
+| `BUCKET_NAME` | S3 bucket name |
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `STRIPE_PRICE_STARTER` | Stripe Price ID for Starter plan |
+| `STRIPE_PRICE_PRO` | Stripe Price ID for Pro plan |
+| `STRIPE_PRICE_BUSINESS` | Stripe Price ID for Business plan |
+| `RAPIDAPI_KEY` | RapidAPI key for text summarization |
+| `NEXT_PUBLIC_APP_URL` | Public app URL |
 
-   Run the following command to install all the required dependencies:
+Initialize the database and run:
 
-   ```bash
-   npm install
-   ```
+```bash
+npx prisma db push
+npm run dev
+```
 
-   This will install all the dependencies listed in the `package.json` file, including Next.js, React, React DOM, Axios, Stripe, Tailwind CSS, and other specific dependencies such as "@aws-sdk/client-s3" and "@aws-sdk/client-transcribe".
+Open [http://localhost:3000](http://localhost:3000).
 
-5. **Setup environment variables**
+### Stripe webhooks (local dev)
 
-    Create a `.env` file in the root directory of your project and add the required environment variables.
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
 
-6. **Run the project**
+Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`.
 
-    Now, you can run the project using the following command:
+## Pricing tiers
 
-    ```bash
-    npm run dev
-    ```
+| | Free | Starter ($9/mo) | Pro ($29/mo) | Business ($79/mo) |
+|---|---|---|---|---|
+| Videos/month | 1 | 15 | 50 | 200 |
+| Export quality | 720p | 1080p | 4K | 4K |
+| Subtitle export | — | SRT, VTT | SRT, VTT, ASS | SRT, VTT, ASS |
+| AI summarization | — | — | Yes | Yes |
+| Watermark | Yes | No | No | No |
+| Team seats | — | — | — | 5 |
+| API access | — | — | — | Yes |
 
-    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project structure
 
-    ## License
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── stripe/checkout/   # Creates Stripe checkout sessions
+│   │   ├── stripe/webhook/    # Handles Stripe lifecycle events
+│   │   ├── upload/            # Auth + S3 upload + usage tracking
+│   │   ├── transcribe/        # AWS Transcribe job management
+│   │   └── summarize/         # Server-side text summarization
+│   ├── auth/signin/           # Google OAuth sign-in page
+│   ├── dashboard/             # User dashboard with usage stats
+│   ├── pricing/               # Pricing page with 4 tiers
+│   └── [filename]/            # Video editor (transcription + captions)
+├── components/                # UI components
+├── libs/
+│   ├── auth.js                # NextAuth configuration
+│   ├── prisma.js              # Prisma client singleton
+│   ├── stripe.js              # Stripe client + plan definitions
+│   └── rate-limit.js          # In-memory API rate limiting
+```
 
-[MIT](https://github.com/Hackerzspace/FramePhase/blob/main/LICENSE)
+## Security
+
+- All Stripe price IDs are server-side only (client sends plan name, server maps to price ID)
+- API keys (RapidAPI, AWS) never exposed to the client
+- Auth required on all API routes (upload, transcribe, summarize, checkout)
+- Rate limiting on all API endpoints
+- Input validation and filename sanitization
+- Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy)
+- COEP/COOP scoped only to the video editor (FFmpeg WASM needs SharedArrayBuffer)
+
+## License
+
+[MIT](https://github.com/ParthMadhvani2/FramePhase/blob/main/LICENSE)

@@ -1,32 +1,43 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { GetTranscriptionJobCommand, StartTranscriptionJobCommand, TranscribeClient } from "@aws-sdk/client-transcribe";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/libs/auth";
+import { transcribeLimiter } from "@/libs/rate-limit";
+import prisma from "@/libs/prisma";
 
 function getClient() {
   return new TranscribeClient({
-    region: 'us-east-1',//region in aws portal in s3 depends the upload and download speeds
-    credentials:{ // this key is connected with the aws server
+    region: 'us-east-1',
+    credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY1,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
     },
   });
 }
 
-function createTranscriptionCommand(filename) {
-  return new StartTranscriptionJobCommand({
+function createTranscriptionCommand(filename, languageCode) {
+  const params = {
     TranscriptionJobName: filename,
     OutputBucketName: process.env.BUCKET_NAME,
     OutputKey: filename + '.transcription',
-    IdentifyLanguage: true,
     Media: {
-      MediaFileUri: 's3://' + process.env.BUCKET_NAME + '/'+filename,
+      MediaFileUri: 's3://' + process.env.BUCKET_NAME + '/' + filename,
     },
-  });
+  };
+
+  // If specific language is provided, use it; otherwise auto-detect
+  if (languageCode && languageCode !== 'auto') {
+    params.LanguageCode = languageCode;
+  } else {
+    params.IdentifyLanguage = true;
+  }
+
+  return new StartTranscriptionJobCommand(params);
 }
 
-// this command is used to send to aws to do transcription
-async function createTranscriptionJob(filename) {
+async function createTranscriptionJob(filename, languageCode) {
   const transcribeClient = getClient();
-  const transcriptionCommand = createTranscriptionCommand(filename);
+  const transcriptionCommand = createTranscriptionCommand(filename, languageCode);
   return transcribeClient.send(transcriptionCommand);
 }
 
@@ -34,15 +45,12 @@ async function getJob(filename) {
   const transcribeClient = getClient();
   let jobStatusResult = null;
   try {
-    // check if already transcribing 
     const transcriptionJobStatusCommand = new GetTranscriptionJobCommand({
       TranscriptionJobName: filename,
     });
-    jobStatusResult = await transcribeClient.send(
-      transcriptionJobStatusCommand
-    );
+    jobStatusResult = await transcribeClient.send(transcriptionJobStatusCommand);
   } catch (e) {
-    console.error('Error occurred while fetching transcription job status:', e);
+    // Job doesn't exist yet — not an error
   }
   return jobStatusResult;
 }
@@ -59,7 +67,7 @@ async function streamToString(stream) {
 async function getTranscriptionFile(filename) {
   const transcriptionFile = filename + '.transcription';
   const s3client = new S3Client({
-    region: 'us-east-1',//region in aws portal in s3 depends the upload and download speeds
+    region: 'us-east-1',
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY1,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY1,
@@ -73,7 +81,7 @@ async function getTranscriptionFile(filename) {
   try {
     transcriptionFileResponse = await s3client.send(getObjectCommand);
   } catch (e) {
-    console.error('Error occurred while fetching transcription file from S3:', e);
+    // File not ready yet
   }
   if (transcriptionFileResponse) {
     return JSON.parse(
@@ -84,35 +92,64 @@ async function getTranscriptionFile(filename) {
 }
 
 export async function GET(req) {
-  const url = new URL(req.url);
-  const searchParams = new URLSearchParams(url.searchParams);
-  const filename = searchParams.get('filename');
+  // Auth check — prevent unauthenticated access to AWS Transcribe
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return Response.json({ error: "Not authenticated" }, { status: 401 });
+  }
 
-  // find ready transcription
+  // Rate limit by user email
+  const { success, resetIn } = transcribeLimiter(session.user.email);
+  if (!success) {
+    return Response.json(
+      { error: "Too many requests. Please wait." },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) },
+      }
+    );
+  }
+
+  const url = new URL(req.url);
+  const filename = url.searchParams.get('filename');
+
+  // Validate filename to prevent path traversal
+  if (!filename || !/^[a-zA-Z0-9._-]+$/.test(filename)) {
+    return Response.json({ error: "Invalid filename" }, { status: 400 });
+  }
+
+  // Find ready transcription
   const transcription = await getTranscriptionFile(filename);
   if (transcription) {
+    // Mark video as completed in database
+    try {
+      await prisma.video.updateMany({
+        where: { filename, userId: session.user.id },
+        data: { status: 'completed' },
+      });
+    } catch (e) {
+      // Non-critical — don't block response
+    }
+
     return Response.json({
-      status:'COMPLETED',
+      status: 'COMPLETED',
       transcription,
     });
   }
 
-  // check if already transcribing
+  // Check if already transcribing
   const existingJob = await getJob(filename);
 
   if (existingJob) {
     return Response.json({
       status: existingJob.TranscriptionJob.TranscriptionJobStatus,
-    })
-  }
-
-  // creating new transcription job
-  if (!existingJob) {
-    const newJob = await createTranscriptionJob(filename);
-    return Response.json({
-      status: newJob.TranscriptionJob.TranscriptionJobStatus,
     });
   }
 
-  return Response.json(null);
+  // Create new transcription job with optional language
+  const languageCode = url.searchParams.get('language') || 'auto';
+  const newJob = await createTranscriptionJob(filename, languageCode);
+  return Response.json({
+    status: newJob.TranscriptionJob.TranscriptionJobStatus,
+  });
 }

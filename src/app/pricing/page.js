@@ -1,126 +1,201 @@
-import React from 'react';
-import Footer from "@/components/Footer";
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Check, X, ArrowRight } from 'lucide-react';
+import { useSession, signIn } from 'next-auth/react';
+import { PLANS, PLAN_ORDER } from '@/libs/plans';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import Link from 'next/link';
+import Footer from '@/components/Footer';
+import FAQSection from '@/components/FAQSection';
 
 export default function PricingPage() {
-    return (
-        <>
-            <div className="mx-auto">
-                <div className="pt-2" id="pricing">
-                    <div className="mx-auto pb-20 mt-4 max-w-7xl px-6 lg:px-8">
-                        <div className="mx-auto max-w-4xl text-center">
-                            <h1 className="text-xl mb-6 font-semibold leading-7 text-indigo-400">Our Transcription Plans</h1>
-                            <p className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-5xl">Whether it&apos;s just you, or your entire
-                                team - we&apos;ve got you covered.</p>
-                        </div>
-                        <p className="mx-auto mt-6 max-w-2xl text-center text-lg leading-8 text-gray-300">Choose the plan that works best for you.</p>
-                        <div className="isolate mx-auto mt-10 grid max-w-md grid-cols-1 gap-8 lg:mx-0 lg:max-w-none lg:grid-cols-3">
+  const [isYearly, setIsYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(null);
+  const { data: session } = useSession();
 
-                            <div className="ring-1 ring-white/10 rounded-3xl p-8 xl:p-10">
-                                <div className="flex items-center justify-between gap-x-4">
-                                    <h2 id="product1" className="text-lg font-semibold leading-8 text-white">Starter Plan</h2>
-                                </div>
-                                <p className="mt-4 text-sm leading-6 text-gray-300">Product details for Starter Plan</p>
-                                <p className="mt-6 flex items-baseline gap-x-1">
-                                    <span className="text-4xl font-bold tracking-tight text-white">$ 10 / unit</span><span className="text-sm font-semibold leading-6 text-gray-300"></span>
-                                </p>
-                                <a href="/pricing" aria-describedby="product1"
-                                    className="bg-white/10 text-white hover:bg-white/20 focus-visible:outline-white mt-6 block rounded-md py-2 px-3 text-center text-sm font-semibold leading-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Order
-                                    Now</a>
-                                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-gray-300 xl:mt-10">
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>40 units</li>
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>1 feature</li>
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>Fast delivery</li>
-                                </ul>
-                            </div>
+  const currentPlan = session?.user?.plan || 'free';
 
-                            <div className="bg-white/5 ring-2 ring-indigo-500 rounded-3xl p-8 xl:p-10">
-                                <div className="flex items-baseline justify-between gap-x-4">
-                                    <h2 id="product2" className="text-lg font-semibold leading-8 text-white">Most Popular Plan</h2>
-                                    <p className="rounded-full bg-indigo-500 px-2.5 py-1 text-xs font-semibold leading-5 text-white">Most popular</p>
-                                </div>
-                                <p className="mt-4 text-sm leading-6 text-gray-300">The most popular choice. Product details for Most Popular Plan</p>
-                                <p className="mt-6 flex items-baseline gap-x-1">
-                                    <span className="text-4xl font-bold tracking-tight text-white">$ 20 / unit</span><span className="text-sm font-semibold leading-6 text-gray-300"></span>
-                                </p>
-                                <a href="/pricing" aria-describedby="product2"
-                                    className="bg-indigo-500 text-white shadow-sm hover:bg-indigo-400 focus-visible:outline-indigo-500 mt-6 block rounded-md py-2 px-3 text-center text-sm font-semibold leading-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Order
-                                    Now</a>
-                                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-gray-300 xl:mt-10">
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>120 units</li>
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>3 different features</li>
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>Fast delivery</li>
-                                </ul>
-                            </div>
+  const handleSubscribe = async (planId) => {
+    if (currentPlan === planId) {
+      toast('You are already on this plan.');
+      return;
+    }
 
-                            <div className="ring-1 ring-white/10 rounded-3xl p-8 xl:p-10">
-                                <div className="flex items-center justify-between gap-x-4">
-                                    <h2 id="product3" className="text-lg font-semibold leading-8 text-white">Pro Plan</h2>
-                                </div>
-                                <p className="mt-4 text-sm leading-6 text-gray-300">Product details for Pro Plan</p>
-                                <p className="mt-6 flex items-baseline gap-x-1">
-                                    <span className="text-4xl font-bold tracking-tight text-white">$ 50 / unit</span><span className="text-sm font-semibold leading-6 text-gray-300"></span>
-                                </p>
-                                <a href="/pricing" aria-describedby="product3"
-                                    className="bg-white/10 text-white hover:bg-white/20 focus-visible:outline-white mt-6 block rounded-md py-2 px-3 text-center text-sm font-semibold leading-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Order
-                                    Now</a>
-                                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-gray-300 xl:mt-10">
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>240 units</li>
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>6 different features</li>
-                                    <li className="flex gap-x-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-                                        aria-hidden="true" className="h-6 w-5 flex-none text-white">
-                                        <path fillRule="evenodd"
-                                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                                            clipRule="evenodd"></path>
-                                    </svg>Fast delivery</li>
-                                </ul>
-                            </div>
-                        </div>
+    if (planId === 'free') {
+      if (!session) signIn('google');
+      return;
+    }
+
+    if (planId === 'business') {
+      window.location.href = 'mailto:madhvaniparth2@gmail.com?subject=FramePhase%20Business%20Plan%20Inquiry';
+      return;
+    }
+
+    if (!session) {
+      signIn('google');
+      return;
+    }
+
+    try {
+      setLoadingPlan(planId);
+      const res = await axios.post('/api/stripe/checkout', { planId });
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
+  return (
+    <>
+      <section className="relative pt-28 pb-16 lg:pt-36">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-[0.05] blur-[120px] bg-brand-500 pointer-events-none" />
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl sm:text-4xl lg:text-5xl font-bold"
+            >
+              Simple, honest pricing.
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mt-3 text-lg text-white/50"
+            >
+              Start free. Upgrade when you need more. Cancel anytime.
+            </motion.p>
+
+            {/* Toggle */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="mt-8 flex items-center justify-center gap-3"
+            >
+              <span className={`text-sm ${!isYearly ? 'text-white' : 'text-white/40'}`}>Monthly</span>
+              <button
+                onClick={() => setIsYearly(!isYearly)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsYearly(!isYearly);
+                  }
+                }}
+                role="switch"
+                aria-checked={isYearly}
+                aria-label="Toggle yearly billing"
+                className={`relative w-11 h-6 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${isYearly ? 'bg-brand-500' : 'bg-white/10'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${isYearly ? 'left-6' : 'left-1'}`} />
+              </button>
+              <span className={`text-sm ${isYearly ? 'text-white' : 'text-white/40'}`}>
+                Yearly <span className="text-xs text-emerald-400 font-medium">-20%</span>
+              </span>
+            </motion.div>
+          </div>
+
+          {/* Cards — dynamically generated from PLANS config */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {PLAN_ORDER.map((planId, index) => {
+              const plan = PLANS[planId];
+              const isCurrent = currentPlan === planId;
+              const isPopular = plan.popular;
+
+              return (
+                <motion.div
+                  key={planId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  className={`relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all duration-300 ${
+                    isPopular
+                      ? 'border-2 border-brand-500/40 bg-brand-500/[0.04] shadow-lg shadow-brand-500/[0.08] scale-[1.02] lg:scale-105'
+                      : 'border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="px-3 py-1 text-[10px] font-semibold bg-brand-500 rounded-full text-white uppercase tracking-wider">Popular</span>
                     </div>
-                </div>
-            </div>
+                  )}
 
-            <Footer />
-        </>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    <p className="text-xs text-white/45 mt-1">{plan.description}</p>
+                  </div>
 
-    );
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">${isYearly ? plan.yearlyPrice : plan.monthlyPrice}</span>
+                    {plan.monthlyPrice > 0 && <span className="text-sm text-white/45">/mo</span>}
+                  </div>
+
+                  <button
+                    onClick={() => handleSubscribe(planId)}
+                    disabled={loadingPlan === planId || isCurrent}
+                    className={`w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all mb-6 ${
+                      isCurrent
+                        ? 'bg-white/5 text-white/30 cursor-default border border-white/[0.06]'
+                        : isPopular
+                        ? 'btn-primary justify-center'
+                        : 'btn-secondary justify-center'
+                    }`}
+                  >
+                    {isCurrent
+                      ? 'Current plan'
+                      : loadingPlan === planId
+                      ? 'Loading...'
+                      : plan.cta}
+                  </button>
+
+                  <div className="flex-1 space-y-2.5">
+                    {plan.features.map((f) => (
+                      <div key={f} className="flex items-start gap-2 text-sm text-white/50">
+                        <Check className="w-4 h-4 text-emerald-400/70 flex-shrink-0 mt-0.5" />
+                        {f}
+                      </div>
+                    ))}
+                    {plan.limitations.map((f) => (
+                      <div key={f} className="flex items-start gap-2 text-sm text-white/40">
+                        <X className="w-4 h-4 text-white/30 flex-shrink-0 mt-0.5" />
+                        {f}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Compare link */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-8 text-center space-y-2"
+          >
+            <Link href="/compare" className="inline-flex items-center gap-1 text-sm text-brand-400 hover:text-brand-300 transition-colors">
+              See how we compare to VEED, Kapwing & others <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <p className="text-xs text-white/40">
+              Need more? <a href="mailto:madhvaniparth2@gmail.com" className="text-white/40 hover:text-white/60 underline">Contact us</a> for custom plans.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      <FAQSection />
+      <Footer />
+    </>
+  );
 }
